@@ -1,0 +1,66 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Grow a Garden Webhook Sender</title>
+  <style>
+    body { font-family: Arial; padding: 2rem; }
+    label { display: block; margin-top: 1rem; }
+    textarea, input { width: 100%; padding: 0.5rem; margin-top: 0.5rem; }
+    button { margin-top: 1rem; padding: 0.75rem 1.5rem; }
+    .output { margin-top: 1rem; white-space: pre-wrap; background: #eee; padding: 1rem; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Grow a Garden Webhook Tester</h1>
+  <label for="apiUrl">GAGAPI Endpoint URL:</label>
+  <input id="apiUrl" placeholder="e.g. https://your.api/stock" type="text">
+
+  <label for="webhookUrl">Guilded Webhook URL:</label>
+  <input id="webhookUrl" placeholder="e.g. https://media.guilded.gg/webhooks/..." type="text">
+
+  <button onclick="sendWebhook()">Send Stock to Webhook</button>
+
+  <div class="output" id="result"></div>
+
+  <script>
+    async function sendWebhook() {
+      const apiUrl = document.getElementById("apiUrl").value;
+      const webhookUrl = document.getElementById("webhookUrl").value;
+      const resultDiv = document.getElementById("result");
+
+      resultDiv.textContent = "⏳ Fetching stock data...";
+
+      try {
+        const res = await fetch(apiUrl);
+        if (!res.ok) throw new Error("API request failed: " + res.status);
+        const data = await res.json();
+
+        let message = "**Grow a Garden Stock Update**\n";
+        if (data.stock && Array.isArray(data.stock)) {
+          data.stock.forEach(item => {
+            message += `- ${item.name || 'Unknown'}: ${item.amount || '?'} left\n`;
+          });
+        } else {
+          message += "No valid stock data found.";
+        }
+
+        // Use CORS proxy to send webhook
+        const proxy = "https://corsproxy.io/?";
+        const webhookRes = await fetch(proxy + encodeURIComponent(webhookUrl), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: message })
+        });
+
+        if (!webhookRes.ok) throw new Error("Webhook failed: " + webhookRes.status);
+
+        resultDiv.textContent = "✅ Webhook sent successfully!";
+      } catch (err) {
+        resultDiv.textContent = "❌ Error: " + err.message;
+      }
+    }
+  </script>
+</body>
+</html>
